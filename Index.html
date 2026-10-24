@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F2F2F7">
+<title>Retirement Forecast</title>
+<style>
+:root{
+  --bg:#F2F2F7; --card:#FFFFFF; --label:#000000; --secondary:rgba(60,60,67,.6); --tertiary:rgba(60,60,67,.3);
+  --sep:rgba(60,60,67,.18); --fill:rgba(120,120,128,.12); --bar:rgba(249,249,249,.86);
+  --blue:#007AFF; --green:#34C759; --orange:#FF9500; --red:#FF3B30; --teal:#30B0C7; --indigo:#5856D6; --gray:#AEAEB2; --pink:#FF2D55;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --card:#1C1C1E; --label:#FFFFFF; --secondary:rgba(235,235,245,.6); --tertiary:rgba(235,235,245,.3);
+    --sep:rgba(84,84,88,.6); --fill:rgba(120,120,128,.24); --bar:rgba(22,22,24,.86);
+    --blue:#0A84FF; --green:#30D158; --orange:#FF9F0A; --red:#FF453A; --teal:#40C8E0; --indigo:#5E5CE6; --gray:#636366; --pink:#FF375F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --card:#1C1C1E; --label:#FFFFFF; --secondary:rgba(235,235,245,.6); --tertiary:rgba(235,235,245,.3);
+  --sep:rgba(84,84,88,.6); --fill:rgba(120,120,128,.24); --bar:rgba(22,22,24,.86);
+  --blue:#0A84FF; --green:#30D158; --orange:#FF9F0A; --red:#FF453A; --teal:#40C8E0; --indigo:#5E5CE6; --gray:#636366; --pink:#FF375F;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--label);
+  font:17px/1.29 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  letter-spacing:-.41px;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+.num{font-variant-numeric:tabular-nums}
+.rounded{font-family:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+
+/* Navigation bar */
+.nav{position:fixed;top:0;left:0;right:0;z-index:9;padding-top:env(safe-area-inset-top,0px);
+  background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:.5px solid transparent;transition:border-color .2s}
+.nav.scrolled{border-bottom-color:var(--sep)}
+.nav-inner{height:44px;display:flex;align-items:center;justify-content:center;position:relative;max-width:640px;margin:0 auto}
+.nav-title{font-weight:600;font-size:17px;opacity:0;transition:opacity .2s}
+.nav.scrolled .nav-title{opacity:1}
+.nav-btn{position:absolute;right:8px;top:0;height:44px;padding:0 8px;border:0;background:none;color:var(--blue);font:inherit;font-size:17px;cursor:pointer}
+.nav-btn:active{opacity:.4}
+.nav-btn[hidden]{display:none}
+
+main{max-width:640px;margin:0 auto;padding:44px 0 calc(49px + 32px)}
+.view{display:none}
+.view.on{display:block}
+h1.large{font-size:34px;line-height:41px;font-weight:700;letter-spacing:.37px;margin:6px 16px 10px}
+
+/* Hero */
+.hero{margin:0 16px 4px}
+.hero .cap{font-size:15px;color:var(--secondary);letter-spacing:-.24px}
+.hero .big{font-size:44px;line-height:1.1;font-weight:700;letter-spacing:-.5px;margin:2px 0 4px}
+.hero .sub{font-size:15px;color:var(--secondary);letter-spacing:-.24px}
+.hero .sub b{color:var(--label);font-weight:600}
+
+/* Charts */
+.chart{position:relative;margin:14px 0 0;padding:0 0 0 16px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart text{font:11px -apple-system,system-ui,sans-serif;fill:var(--secondary);letter-spacing:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 16px 0;font-size:13px;color:var(--secondary);letter-spacing:-.08px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.hint{font-size:13px;color:var(--tertiary);margin:6px 16px 0;letter-spacing:-.08px}
+.fade{transition:opacity .35s ease}
+.fade.dim{opacity:.25}
+
+/* Grouped lists */
+.sh{font-size:20px;line-height:25px;font-weight:700;letter-spacing:.38px;margin:32px 16px 8px}
+.sh small{display:block;font-size:13px;font-weight:400;color:var(--secondary);letter-spacing:-.08px;line-height:18px;margin-top:2px}
+.group{background:var(--card);border-radius:12px;margin:0 16px;overflow:hidden}
+.ft{font-size:13px;line-height:18px;color:var(--secondary);margin:7px 32px 0;letter-spacing:-.08px}
+.row{position:relative;display:flex;align-items:center;gap:12px;min-height:44px;padding:11px 16px}
+.row+.row::before,.row+.yr::before,.yr+.yr::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.row .lbl{flex:1;min-width:0}
+.row .lbl .s{display:block;font-size:13px;color:var(--secondary);letter-spacing:-.08px;margin-top:1px}
+.row .val{color:var(--secondary);text-align:right}
+.row .strong{color:var(--label);font-weight:600}
+
+/* Probability rows */
+.ring{flex:none}
+.ring circle{fill:none;stroke-width:4}
+.ring .track{stroke:var(--fill)}
+.pct{width:52px;text-align:right;font-weight:600;font-size:17px}
+.row.tap{cursor:pointer}
+.row.tap:active{background:var(--fill)}
+.row.sel .lbl>span:first-child{color:var(--blue)}
+
+/* Breakdown bar */
+.stack{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:14px 16px 0;background:var(--fill)}
+.stack span{display:block;height:100%}
+.stack span+span{margin-left:2px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+
+/* Year rows */
+.yr{position:relative}
+.yr>button{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:11px 16px;cursor:pointer}
+.yr>button:active{background:var(--fill)}
+.yr>button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.yr .age{flex:1}
+.yr .age .s{display:block;font-size:13px;color:var(--secondary);letter-spacing:-.08px}
+.yr .tot{font-weight:600}
+.chev{width:8px;height:13px;flex:none;transition:transform .2s;color:var(--tertiary)}
+.yr.open .chev{transform:rotate(90deg)}
+.detail{display:none;grid-template-columns:1fr 1fr;gap:10px 16px;padding:0 16px 14px 16px;font-size:15px;letter-spacing:-.24px}
+.yr.open .detail{display:grid}
+.detail div span{display:block;font-size:12px;color:var(--secondary);letter-spacing:0}
+.tag{display:inline-block;font-size:12px;font-weight:600;color:var(--orange);background:color-mix(in srgb,var(--orange) 14%,transparent);border-radius:5px;padding:1px 6px;margin-left:6px;letter-spacing:0;vertical-align:1px}
+
+/* Inputs */
+.row input[type=text]{border:0;background:transparent;font:inherit;letter-spacing:inherit;color:var(--secondary);text-align:right;flex:0 0 7.5em;width:7.5em;padding:0;outline:none;min-width:0}
+.row input[type=text]:focus{color:var(--blue)}
+.row input::placeholder{color:var(--tertiary)}
+.row label{flex:1;min-width:0;cursor:text}
+.switch{position:relative;width:51px;height:31px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:16px;background:var(--fill);transition:background .2s;pointer-events:none}
+.switch span::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:transform .2s}
+.switch input:checked+span{background:var(--green)}
+.switch input:checked+span::after{transform:translateX(20px)}
+.switch input:focus-visible+span{outline:2px solid var(--blue);outline-offset:2px}
+.danger{all:unset;box-sizing:border-box;display:block;width:100%;padding:11px 16px;color:var(--red);text-align:center;cursor:pointer;min-height:44px}
+.danger:active{background:var(--fill)}
+.danger:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+
+/* Accounts */
+.row input.name{flex:1;width:auto;text-align:left;color:var(--label);font-weight:600}
+.row input.name:focus{color:var(--label)}
+.acct+.acct{margin-top:16px}
+.seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;flex:none}
+.seg button{all:unset;padding:5px 10px;font-size:13px;font-weight:500;letter-spacing:-.08px;border-radius:7px;cursor:pointer;color:var(--label)}
+.seg button.on{background:var(--card);box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
+.seg button:focus-visible{outline:2px solid var(--blue)}
+.addbtn{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;padding:11px 16px;min-height:44px;color:var(--blue);cursor:pointer}
+.addbtn:active{background:var(--fill)}
+.addbtn:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.addbtn svg{width:22px;height:22px;flex:none}
+.danger.small{text-align:left;padding:11px 16px}
+
+/* Tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:9;padding-bottom:env(safe-area-inset-bottom,0px);
+  background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep)}
+.tabbar-inner{display:flex;max-width:640px;margin:0 auto;height:49px}
+.tab{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--gray);font:500 10px/12px -apple-system,system-ui,sans-serif;letter-spacing:.1px;cursor:pointer;padding:0}
+.tab svg{width:26px;height:24px}
+.tab.on{color:var(--blue)}
+.tab:focus-visible{outline:2px solid var(--blue);outline-offset:-4px;border-radius:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <div class="nav-title" id="navTitle">Forecast</div>
+    <button class="nav-btn" id="rerun" type="button">Run again</button>
+  </div>
+</header>
+
+<main>
+  <!-- FORECAST -->
+  <section class="view on" id="v-forecast" aria-label="Forecast">
+    <h1 class="large" id="t-forecast">Forecast</h1>
+    <div class="hero">
+      <div class="cap" id="fCap">Median balance in 40 years</div>
+      <div class="big rounded num" id="fBig">$0</div>
+      <div class="sub num" id="fSub"></div>
+    </div>
+    <div class="chart fade" id="coneChart" aria-label="Range of simulated outcomes over 40 years"></div>
+    <div class="legend">
+      <span><i style="background:color-mix(in srgb,var(--blue) 14%,transparent)"></i>10th–90th percentile</span>
+      <span><i style="background:color-mix(in srgb,var(--blue) 30%,transparent)"></i>25th–75th</span>
+      <span><i style="background:var(--blue)"></i>Median</span>
+    </div>
+    <p class="hint">Drag across the chart to see any year.</p>
+
+    <h2 class="sh">Chance of reaching your goals<small id="simNote">Share of 1,500 simulated paths that end above each goal.</small></h2>
+    <div class="group" id="probList"></div>
+
+    <h2 class="sh">Downside risk</h2>
+    <div class="group">
+      <div class="row">
+        <div class="lbl"><span id="riskLbl">Ending below $3,200,000</span><span class="s">After 40 years</span></div>
+        <div class="pct num" id="riskPct" style="width:auto">0%</div>
+      </div>
+      <div class="row">
+        <div class="lbl"><span>Expected compound return</span><span class="s">Average return minus half the variance</span></div>
+        <div class="val num strong" id="geo">0%</div>
+      </div>
+    </div>
+
+    <h2 class="sh">Contributions vs. compound growth<small>What you put in, against the median balance.</small></h2>
+    <div class="chart" id="growthChart" aria-label="Contributions compared with median balance"></div>
+    <div class="legend">
+      <span><i style="background:var(--gray)"></i>Your contributions</span>
+      <span><i style="background:var(--green)"></i>Median balance</span>
+    </div>
+    <p class="ft" id="growthNote" style="margin-left:16px"></p>
+  </section>
+
+  <!-- PLAN -->
+  <section class="view" id="v-plan" aria-label="Plan">
+    <h1 class="large" id="t-plan">Plan</h1>
+    <div class="hero">
+      <div class="cap" id="pCap">Projected at age 50</div>
+      <div class="big rounded num" id="pBig">$0</div>
+      <div class="sub num" id="pSub"></div>
+    </div>
+    <div class="stack" id="pStack"></div>
+    <div class="group" style="margin-top:14px" id="pBreak"></div>
+
+    <h2 class="sh">Balance by age</h2>
+    <div class="chart" id="planChart" aria-label="Account balances by age"></div>
+    <h2 class="sh">By account</h2>
+    <div class="group" id="acctList"></div>
+
+    <h2 class="sh">Year by year<small>Tap a year for the details.</small></h2>
+    <div class="group" id="yearList"></div>
+  </section>
+
+  <!-- INPUTS -->
+  <section class="view" id="v-inputs" aria-label="Inputs">
+    <h1 class="large" id="t-inputs">Inputs</h1>
+    <div id="inputGroups"></div>
+    <div class="group" style="margin-top:32px"><button class="danger" id="resetBtn" type="button">Restore spreadsheet values</button></div>
+    <p class="ft">Changes are saved on this device and update every screen right away. Restoring brings back the starting balances from your spreadsheet.</p>
+  </section>
+</main>
+
+<nav class="tabbar" aria-label="Sections">
+  <div class="tabbar-inner">
+    <button class="tab on" data-tab="forecast" type="button" aria-current="page">
+      <svg viewBox="0 0 26 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 12l4 4 9-10"/><path d="M17 6h5v5"/></svg>Forecast
+    </button>
+    <button class="tab" data-tab="plan" type="button">
+      <svg viewBox="0 0 26 24" fill="currentColor"><rect x="3" y="13" width="4.5" height="8" rx="1.3"/><rect x="10.75" y="8" width="4.5" height="13" rx="1.3"/><rect x="18.5" y="3" width="4.5" height="18" rx="1.3"/></svg>Plan
+    </button>
+    <button class="tab" data-tab="inputs" type="button">
+      <svg viewBox="0 0 26 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h18M4 12h18M4 18h18"/><circle cx="9" cy="6" r="2.4" fill="var(--bar)"/><circle cx="17" cy="12" r="2.4" fill="var(--bar)"/><circle cx="11" cy="18" r="2.4" fill="var(--bar)"/></svg>Inputs
+    </button>
+  </div>
+</nav>
+
+<script>
+(function(){
+"use strict";
+var KEY="mc-forecast-inputs-v2",OLDKEY="mc-forecast-inputs-v1";
+var DEFAULTS={
+  mcStart:965, mcContrib:250, mcIncrease:0, mcMean:9.5, mcSd:15.3, mcEr:0.075,
+  targets:[44000,120000,250000,475000,850000,1500000,2750000,5000000], riskTarget:3200000,
+  age:23, retireAge:50, salary:63000, raise:3,
+  accounts:[
+    {name:"401(k)",bal:2716,ret:8,mode:"pct",amt:5,match:5,soy:true},
+    {name:"Roth IRA",bal:0,ret:9,mode:"usd",amt:0,match:0},
+    {name:"Taxable brokerage",bal:1829,ret:9,mode:"pct",amt:10,match:0}
+  ],
+  stopAge:45, reduceAge:0, reducePct:50, applyRaise:false
+};
+var COLORS=["var(--blue)","var(--teal)","var(--indigo)","var(--orange)","var(--pink)","var(--green)"];
+var MAXACC=6;
+var YEARS=[5,10,15,20,25,30,35,40], N=1500, P=24, Y=40;
+
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function cleanAcct(a,i){
+  return {name:String(a&&a.name!=null?a.name:"Account "+(i+1)).slice(0,40),bal:+a.bal||0,ret:isNaN(+a.ret)?7:+a.ret,
+    mode:a.mode==="usd"?"usd":"pct",amt:+a.amt||0,match:+a.match||0,soy:!!a.soy};
+}
+var SHARED=["mcStart","mcContrib","mcIncrease","mcMean","mcSd","mcEr","riskTarget","age","retireAge","salary","raise","stopAge","reduceAge","reducePct","applyRaise"];
+function load(){
+  var s=clone(DEFAULTS);
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var o=JSON.parse(raw);
+      SHARED.forEach(function(k){if(o[k]!==undefined)s[k]=o[k]});
+      if(Array.isArray(o.targets)&&o.targets.length===8)s.targets=o.targets;
+      if(Array.isArray(o.accounts)&&o.accounts.length)s.accounts=o.accounts.slice(0,MAXACC).map(cleanAcct);
+    }else{
+      var old=localStorage.getItem(OLDKEY);
+      if(old){
+        var v=JSON.parse(old);
+        SHARED.forEach(function(k){if(v[k]!==undefined)s[k]=v[k]});
+        if(Array.isArray(v.targets)&&v.targets.length===8)s.targets=v.targets;
+        var k4=s.accounts[0],kt=s.accounts[2];
+        if(v.bal401!=null)k4.bal=+v.bal401||0; if(v.r401!=null)k4.ret=+v.r401; if(v.c401!=null)k4.amt=+v.c401; if(v.match!=null)k4.match=+v.match;
+        if(v.holdings){kt.bal=Object.keys(v.holdings).reduce(function(t,h){return t+(+v.holdings[h]||0)},0)}
+        if(v.rInd!=null)kt.ret=+v.rInd; if(v.cInd!=null)kt.amt=+v.cInd;
+      }
+    }
+  }catch(e){}
+  return s;
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+var S=load();
+
+/* ---------- formatting ---------- */
+function money(v){return (v<0?"−$":"$")+Math.round(Math.abs(v)).toLocaleString("en-US")}
+function compact(v){
+  if(v>=1e6){var m=v/1e6;return "$"+(m>=10?m.toFixed(0):m.toFixed(1).replace(/\.0$/,""))+"M"}
+  if(v>=1e3)return "$"+Math.round(v/1e3)+"K";
+  return "$"+Math.round(v);
+}
+function pctFmt(p){var v=p*100;return (v>0&&v<1?"<1":Math.round(v))+"%"}
+function num(v,d){return Number(v).toLocaleString("en-US",{maximumFractionDigits:d==null?2:d})}
+function getPath(p){var a=p.split("."),o=S;for(var i=0;i<a.length;i++)o=o[a[i]];return o}
+function setPath(p,v){var a=p.split("."),o=S;for(var i=0;i<a.length-1;i++)o=o[a[i]];o[a[a.length-1]]=v}
+
+/* ---------- Monte Carlo ---------- */
+var spare=null;
+function gauss(){
+  if(spare!==null){var t=spare;spare=null;return t}
+  var u=0,v=0;while(u===0)u=Math.random();v=Math.random();
+  var r=Math.sqrt(-2*Math.log(u)),th=2*Math.PI*v;spare=r*Math.sin(th);return r*Math.cos(th);
+}
+var SIM=null;
+function runSim(){
+  var m=S.mcMean/100/P, sd=S.mcSd/100/P, er=S.mcEr/100/P, inc=S.mcIncrease/100;
+  var by=[];for(var y=0;y<=Y;y++)by.push(new Float64Array(N));
+  for(var s=0;s<N;s++){
+    var b=S.mcStart;by[0][s]=b;
+    for(y=0;y<Y;y++){
+      var c=S.mcContrib*Math.pow(1+inc,y);
+      for(var k=0;k<P;k++){b=b*(1+m+sd*gauss()-er)+c}
+      by[y+1][s]=b;
+    }
+  }
+  var stats=[],contrib=[],cum=S.mcStart;
+  for(y=0;y<=Y;y++){
+    if(y>0)cum+=S.mcContrib*Math.pow(1+inc,y-1)*P;
+    contrib.push(cum);
+    by[y].sort();
+    stats.push({p10:q(by[y],.1),p25:q(by[y],.25),p50:median(by[y]),p75:q(by[y],.75),p90:q(by[y],.9)});
+  }
+  SIM={by:by,stats:stats,contrib:contrib};
+}
+function q(a,p){var i=(a.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return a[lo]+(a[hi]-a[lo])*(i-lo)}
+function median(a){var n=a.length,h=n>>1;return n%2?a[h]:(a[h-1]+a[h])/2}
+function probAbove(y,t){var a=SIM.by[y],c=0;for(var i=0;i<a.length;i++)if(a[i]>t)c++;return c/a.length}
+function probBelow(y,t){var a=SIM.by[y],c=0;for(var i=0;i<a.length;i++)if(a[i]<t)c++;return c/a.length}
+
+/* ---------- Year-by-year plan ---------- */
+function computePlan(){
+  var A=S.accounts,open=A.map(function(a){return +a.bal||0});
+  var start=open.reduce(function(t,v){return t+v},0);
+  var n=Math.max(1,Math.min(70,Math.round(S.retireAge-S.age)));
+  var rows=[],sum={c:0,m:0};
+  for(var y=0;y<n;y++){
+    var age=S.age+y, sal=S.salary*Math.pow(1+S.raise/100,y), gf=S.applyRaise?Math.pow(1+S.raise/100,y):1;
+    var stopped=S.stopAge>0&&age>=S.stopAge, reduced=!stopped&&S.reduceAge>0&&age>=S.reduceAge;
+    var f=stopped?0:reduced?Math.max(0,S.reducePct)/100:1;
+    var per=A.map(function(a,i){
+      var amt=+a.amt||0;
+      var c=a.mode==="pct"?S.salary*gf*amt/100*f:amt*gf*f;
+      var mp=stopped?0:(+a.match||0);
+      if(reduced&&a.mode==="pct")mp=Math.min(mp,amt*f);
+      var m=S.salary*gf*mp/100, r=(+a.ret||0)/100, o=open[i];
+      var close=a.soy?(o+c+m)*(1+r):o+c+m+(o+(c+m)/2)*r;
+      return {o:o,c:c,m:m,g:close-o-c-m,close:close};
+    });
+    var c=0,m=0,tot=0;per.forEach(function(p){c+=p.c;m+=p.m;tot+=p.close});
+    open=per.map(function(p){return p.close});
+    rows.push({y:y+1,age:age,sal:sal,per:per,c:c,m:m,total:tot,stopped:stopped,reduced:reduced});
+    sum.c+=c;sum.m+=m;
+  }
+  return {rows:rows,sum:sum,start:start,end:S.age+n};
+}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+/* ---------- chart helpers ---------- */
+function niceStep(x){if(x<=0)return 1;var p=Math.pow(10,Math.floor(Math.log10(x))),n=x/p;return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p}
+function axis(max){var st=niceStep(max/4);return {max:Math.ceil(max/st)*st||st,step:st}}
+function frame(host,h){var w=Math.max(200,host.clientWidth-16);return {w:w,h:h,l:0,r:46,t:10,b:24}}
+function pathOf(pts){return pts.map(function(p,i){return (i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)}).join("")}
+function band(xs,lo,hi){var a=[],i;for(i=0;i<xs.length;i++)a.push([xs[i],hi[i]]);for(i=xs.length-1;i>=0;i--)a.push([xs[i],lo[i]]);return pathOf(a)+"Z"}
+function grid(f,ax){
+  var s="",iw=f.w-f.l-f.r;
+  for(var v=0;v<=ax.max+1e-6;v+=ax.step){
+    var y=f.t+(1-v/ax.max)*(f.h-f.t-f.b);
+    s+='<line x1="'+f.l+'" x2="'+(f.l+iw)+'" y1="'+y+'" y2="'+y+'" stroke="var(--sep)" stroke-width="'+(v===0?1:.5)+'"'+(v===0?'':' stroke-dasharray="2 3"')+'/>';
+    s+='<text x="'+(f.l+iw+6)+'" y="'+(y+3.5)+'">'+(v===0?"$0":compact(v))+'</text>';
+  }
+  return s;
+}
+
+/* ---------- Forecast rendering ---------- */
+var selYear=40;
+function renderForecast(){
+  if(!SIM)return;
+  var st=SIM.stats[selYear];
+  var ageNow=+S.age;
+  document.getElementById("fCap").textContent="Median balance in "+selYear+" year"+(selYear===1?"":"s")+(isFinite(ageNow)?", at age "+(ageNow+selYear):"");
+  document.getElementById("fBig").textContent=money(st.p50);
+  document.getElementById("fSub").innerHTML="Likely range <b>"+compact(st.p10)+"</b> to <b>"+compact(st.p90)+"</b>";
+  drawCone();
+  drawGrowth();
+  // probabilities
+  var pl=document.getElementById("probList"),h="";
+  YEARS.forEach(function(yr,i){
+    var p=probAbove(yr,S.targets[i]),col=p>=.5?"var(--green)":p>=.2?"var(--orange)":"var(--red)";
+    var C=2*Math.PI*11;
+    h+='<div class="row tap'+(yr===selYear?' sel':'')+'" data-year="'+yr+'" role="button" tabindex="0">'+
+      '<div class="lbl"><span class="num">'+money(S.targets[i])+' in '+yr+' years</span><span class="s num">Median '+money(SIM.stats[yr].p50)+'</span></div>'+
+      '<svg class="ring" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle class="track" cx="14" cy="14" r="11"/><circle cx="14" cy="14" r="11" stroke="'+col+'" stroke-linecap="round" stroke-dasharray="'+(C*p).toFixed(2)+' '+C.toFixed(2)+'" transform="rotate(-90 14 14)"/></svg>'+
+      '<div class="pct num">'+pctFmt(p)+'</div></div>';
+  });
+  pl.innerHTML=h;
+  document.getElementById("riskLbl").textContent="Ending below "+money(S.riskTarget);
+  var rp=probBelow(40,S.riskTarget);
+  var rEl=document.getElementById("riskPct");rEl.textContent=pctFmt(rp);
+  rEl.style.color=rp>=.5?"var(--red)":rp>=.2?"var(--orange)":"var(--green)";
+  var g=S.mcMean/100-0.5*Math.pow(S.mcSd/100,2);
+  document.getElementById("geo").textContent=(g*100).toFixed(2)+"%";
+  var c40=SIM.contrib[40],m40=SIM.stats[40].p50;
+  document.getElementById("growthNote").textContent=m40>c40?"After 40 years, growth makes up "+Math.round((1-c40/m40)*100)+"% of the median balance. You put in "+money(c40)+".":"You put in "+money(c40)+" over 40 years.";
+}
+function drawCone(){
+  var host=document.getElementById("coneChart");if(!host.clientWidth)return;
+  var f=frame(host,230),st=SIM.stats,ax=axis(st[Y].p90*1.02),iw=f.w-f.l-f.r,ih=f.h-f.t-f.b;
+  var xs=[],p10=[],p25=[],p50=[],p75=[],p90=[];
+  for(var y=0;y<=Y;y++){xs.push(f.l+y/Y*iw);var Yv=function(v){return f.t+(1-Math.min(v,ax.max*1.08)/ax.max)*ih};
+    p10.push(Yv(st[y].p10));p25.push(Yv(st[y].p25));p50.push(Yv(st[y].p50));p75.push(Yv(st[y].p75));p90.push(Yv(st[y].p90))}
+  var sx=xs[selYear],sy=p50[selYear];
+  var s='<svg viewBox="0 0 '+f.w+' '+f.h+'" height="'+f.h+'"><defs><clipPath id="cc"><rect x="0" y="0" width="'+(f.l+iw)+'" height="'+(f.t+ih)+'"/></clipPath></defs>'+grid(f,ax)+
+    '<g clip-path="url(#cc)"><path d="'+band(xs,p10,p90)+'" fill="color-mix(in srgb,var(--blue) 14%,transparent)"/>'+
+    '<path d="'+band(xs,p25,p75)+'" fill="color-mix(in srgb,var(--blue) 22%,transparent)"/>'+
+    '<path d="'+pathOf(xs.map(function(x,i){return [x,p50[i]]}))+'" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></g>';
+  [0,10,20,30,40].forEach(function(y){s+='<text x="'+xs[y]+'" y="'+(f.h-6)+'" text-anchor="'+(y===0?"start":y===40?"end":"middle")+'">'+(y===0?"Now":y+" yr")+'</text>'});
+  s+='<line x1="'+sx+'" x2="'+sx+'" y1="'+f.t+'" y2="'+(f.t+ih)+'" stroke="var(--label)" stroke-opacity=".35" stroke-width="1"/>'+
+     '<circle cx="'+sx+'" cy="'+sy+'" r="6" fill="var(--card)" stroke="var(--blue)" stroke-width="2.5"/></svg>';
+  host.innerHTML=s;
+  host._f=f;
+}
+function drawGrowth(){
+  var host=document.getElementById("growthChart");if(!host.clientWidth)return;
+  var f=frame(host,190),ax=axis(SIM.stats[Y].p50*1.02),iw=f.w-f.l-f.r,ih=f.h-f.t-f.b;
+  var X=function(y){return f.l+y/Y*iw},V=function(v){return f.t+(1-v/ax.max)*ih};
+  var med=[],con=[],base=[];
+  for(var y=0;y<=Y;y++){med.push([X(y),V(SIM.stats[y].p50)]);con.push([X(y),V(SIM.contrib[y])]);base.push([X(y),V(0)])}
+  var area=function(pts){return pathOf(pts)+"L"+X(Y)+" "+V(0)+"L"+X(0)+" "+V(0)+"Z"};
+  var s='<svg viewBox="0 0 '+f.w+' '+f.h+'" height="'+f.h+'">'+grid(f,ax)+
+    '<path d="'+area(med)+'" fill="color-mix(in srgb,var(--green) 20%,transparent)"/>'+
+    '<path d="'+pathOf(med)+'" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linejoin="round"/>'+
+    '<path d="'+area(con)+'" fill="color-mix(in srgb,var(--gray) 45%,transparent)"/>'+
+    '<path d="'+pathOf(con)+'" fill="none" stroke="var(--gray)" stroke-width="2"/>';
+  [0,10,20,30,40].forEach(function(y){s+='<text x="'+X(y)+'" y="'+(f.h-6)+'" text-anchor="'+(y===0?"start":y===40?"end":"middle")+'">'+(y===0?"Now":y+" yr")+'</text>'});
+  host.innerHTML=s+'</svg>';
+}
+/* scrubbing */
+(function(){
+  var host=document.getElementById("coneChart"),active=false;
+  function pick(e){
+    var f=host._f;if(!f)return;
+    var r=host.getBoundingClientRect(),x=e.clientX-r.left-16;
+    var y=Math.round(x/(f.w-f.l-f.r)*Y);y=Math.max(1,Math.min(Y,y));
+    if(y!==selYear){selYear=y;renderForecast()}
+  }
+  host.addEventListener("pointerdown",function(e){active=true;pick(e)});
+  host.addEventListener("pointermove",function(e){if(active||e.pointerType==="mouse"&&e.buttons)pick(e)});
+  ["pointerup","pointercancel","pointerleave"].forEach(function(t){host.addEventListener(t,function(){active=false})});
+})();
+document.getElementById("probList").addEventListener("click",function(e){
+  var r=e.target.closest("[data-year]");if(!r)return;selYear=+r.dataset.year;renderForecast();
+  window.scrollTo({top:0,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+});
+document.getElementById("probList").addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.dataset.year){e.preventDefault();e.target.click()}});
+
+/* ---------- Plan rendering ---------- */
+var PLAN=null,openYears={};
+function renderPlan(){
+  PLAN=computePlan();
+  var rows=PLAN.rows,last=rows[rows.length-1],sum=PLAN.sum,A=S.accounts;
+  document.getElementById("pCap").textContent="Projected at age "+PLAN.end;
+  document.getElementById("pBig").textContent=money(last.total);
+  document.getElementById("pSub").textContent="Across "+A.length+" account"+(A.length===1?"":"s");
+  var growth=last.total-PLAN.start-sum.c-sum.m;
+  var parts=[["Your contributions",sum.c,"var(--blue)"],["Employer match",sum.m,"var(--indigo)"],["Starting balances",PLAN.start,"var(--gray)"],["Investment growth",growth,"var(--green)"]];
+  var tot=parts.reduce(function(a,p){return a+Math.max(0,p[1])},0)||1;
+  document.getElementById("pStack").innerHTML=parts.map(function(p){return p[1]>0?'<span style="width:'+(p[1]/tot*100)+'%;background:'+p[2]+'"></span>':""}).join("");
+  document.getElementById("pBreak").innerHTML=parts.map(function(p){
+    return '<div class="row"><span class="dot" style="background:'+p[2]+'"></span><div class="lbl">'+p[0]+'</div><div class="val num">'+money(p[1])+'</div></div>';
+  }).join("");
+  document.getElementById("acctList").innerHTML=A.map(function(a,i){
+    var e=last.per[i].close,share=last.total>0?e/last.total:0;
+    return '<div class="row"><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><div class="lbl"><span>'+esc(a.name||"Account")+'</span><span class="s num">'+num(a.ret)+'% return, '+Math.round(share*100)+'% of total</span></div><div class="val num strong">'+money(e)+'</div></div>';
+  }).join("");
+  drawPlan();
+  var h="";
+  rows.forEach(function(r){
+    var tag=r.stopped?'<span class="tag">Paused</span>':r.reduced?'<span class="tag">Reduced</span>':"";
+    var det='<div><span>Salary</span>'+money(r.sal)+'</div><div><span>Employer match</span>'+money(r.m)+'</div>';
+    r.per.forEach(function(p,i){var nm=esc(A[i].name||"Account");det+='<div><span>'+nm+' added</span>'+money(p.c+p.m)+'</div><div><span>'+nm+' balance</span>'+money(p.close)+'</div>'});
+    h+='<div class="yr'+(openYears[r.y]?" open":"")+'" data-y="'+r.y+'"><button type="button" aria-expanded="'+(!!openYears[r.y])+'">'+
+      '<div class="age">Age '+r.age+tag+'<span class="s">Year '+r.y+'</span></div><div class="tot num">'+money(r.total)+'</div>'+
+      '<svg class="chev" viewBox="0 0 8 13" aria-hidden="true"><path d="M1.5 1.5 6.5 6.5 1.5 11.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
+      '<div class="detail num">'+det+'</div></div>';
+  });
+  document.getElementById("yearList").innerHTML=h;
+}
+function drawPlan(){
+  var host=document.getElementById("planChart");if(!host.clientWidth||!PLAN)return;
+  var rows=PLAN.rows,n=rows.length,A=S.accounts,f=frame(host,210),ax=axis(Math.max(1,rows[n-1].total)*1.02),iw=f.w-f.l-f.r,ih=f.h-f.t-f.b;
+  var X=function(i){return f.l+i/n*iw},V=function(v){return f.t+(1-v/ax.max)*ih};
+  var s='<svg viewBox="0 0 '+f.w+' '+f.h+'" height="'+f.h+'">'+grid(f,ax);
+  var stopIdx=-1;rows.some(function(r,i){if(r.stopped){stopIdx=i;return true}});
+  if(stopIdx>=0){var sx=X(stopIdx);s+='<rect x="'+sx+'" y="'+f.t+'" width="'+(X(n)-sx)+'" height="'+ih+'" fill="var(--fill)" opacity=".6"/><text x="'+(sx-5)+'" y="'+(f.t+12)+'" text-anchor="end">Paused at '+rows[stopIdx].age+'</text>'}
+  var stacks=[];
+  A.forEach(function(a,k){
+    var pts=[];
+    for(var i=0;i<=n;i++){
+      var v=0;for(var j=0;j<=k;j++)v+=i===0?(+A[j].bal||0):rows[i-1].per[j].close;
+      pts.push([X(i),V(v)]);
+    }
+    stacks.push(pts);
+  });
+  for(var k=stacks.length-1;k>=0;k--){
+    var col=COLORS[k%COLORS.length],d=pathOf(stacks[k]);
+    s+='<path d="'+d+'L'+X(n)+' '+V(0)+'L'+X(0)+' '+V(0)+'Z" fill="color-mix(in srgb,'+col+' 32%,var(--bg))"/>';
+  }
+  stacks.forEach(function(pts,k){s+='<path d="'+pathOf(pts)+'" fill="none" stroke="'+COLORS[k%COLORS.length]+'" stroke-width="2" stroke-linejoin="round"/>'});
+  var step=n>30?10:5;
+  for(var i=0;i<=n-3;i+=step){s+='<text x="'+X(i)+'" y="'+(f.h-6)+'" text-anchor="'+(i===0?"start":"middle")+'">'+(S.age+i)+'</text>'}
+  s+='<text x="'+X(n)+'" y="'+(f.h-6)+'" text-anchor="end">'+(S.age+n)+'</text>';
+  host.innerHTML=s+'</svg>';
+}
+document.getElementById("yearList").addEventListener("click",function(e){
+  var b=e.target.closest(".yr>button");if(!b)return;var yr=b.parentNode,y=yr.dataset.y;
+  openYears[y]=!openYears[y];yr.classList.toggle("open",!!openYears[y]);b.setAttribute("aria-expanded",!!openYears[y]);
+});
+
+/* ---------- Inputs ---------- */
+var FIELDS=[
+  {title:"You",rows:[["age","Current age","age"],["retireAge","Retirement age","age"]]},
+  {title:"Salary",rows:[["salary","Annual salary","$"],["raise","Annual raise","%"],["applyRaise","Grow contributions with salary","toggle"]],
+    note:"When off, contributions stay at today’s level."},
+  {accounts:true},
+  {title:"Scenarios",note:"Enter 0 to turn an age off. Reduced contributions apply to every account.",rows:[["stopAge","Stop all contributions at age","age"],["reduceAge","Reduce contributions at age","age"],
+    ["reducePct","Reduced to (% of normal)","%",0]]},
+  {title:"Simulation",note:"Used by Forecast. Returns are annual; the model compounds twice a month.",rows:[
+    ["mcStart","Starting balance","$"],["mcContrib","Twice-monthly contribution","$"],["mcIncrease","Yearly contribution increase","%"],
+    ["mcMean","Average annual return","%"],["mcSd","Volatility (standard deviation)","%"],["mcEr","Expense ratio","%",3]]},
+  {title:"Goals",note:"Forecast shows the chance of beating each amount, and the risk of ending below the last one.",rows:
+    YEARS.map(function(y,i){return ["targets."+i,"Goal at "+y+" years","$"]}).concat([["riskTarget","Downside line at 40 years","$"]])}
+];
+function display(v,kind,dec){
+  if(kind==="text")return esc(v==null?"":v);
+  if(v===null||v===""||v===undefined||isNaN(v))return "";
+  if(kind==="$")return money(v);
+  if(kind==="%")return num(v,dec==null?2:dec)+"%";
+  return String(v);
+}
+var fid=0;
+function field(key,label,kind,dec,sub){
+  var id="f"+(fid++);
+  if(kind==="toggle")return '<div class="row"><label for="'+id+'" class="lbl">'+label+'</label><span class="switch"><input type="checkbox" role="switch" id="'+id+'" data-key="'+key+'"'+(getPath(key)?" checked":"")+'><span></span></span></div>';
+  return '<div class="row"><label for="'+id+'"><span>'+label+'</span>'+(sub?'<span style="display:block;font-size:13px;color:var(--secondary);letter-spacing:-.08px">'+sub+'</span>':'')+'</label>'+
+    '<input type="text" inputmode="decimal" autocomplete="off" id="'+id+'" data-key="'+key+'" data-kind="'+kind+'" data-dec="'+(dec==null?"":dec)+'" value="'+display(getPath(key),kind,dec)+'"></div>';
+}
+function accountsHTML(){
+  var A=S.accounts,h='<h2 class="sh">Accounts<small>Each account grows at its own expected return.</small></h2>';
+  A.forEach(function(a,i){
+    var k="accounts."+i+".";
+    h+='<div class="group acct">'+
+      '<div class="row"><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><input type="text" class="name" aria-label="Account name" autocomplete="off" data-key="'+k+'name" data-kind="text" value="'+esc(a.name)+'" placeholder="Account name"></div>'+
+      field(k+"bal","Current balance","$")+
+      field(k+"ret","Expected return","%")+
+      '<div class="row"><div class="lbl">Contribute as</div><div class="seg" role="group" aria-label="Contribution type">'+
+        '<button type="button" data-mode="pct" data-i="'+i+'" class="'+(a.mode==="pct"?"on":"")+'" aria-pressed="'+(a.mode==="pct")+'">% of salary</button>'+
+        '<button type="button" data-mode="usd" data-i="'+i+'" class="'+(a.mode==="usd"?"on":"")+'" aria-pressed="'+(a.mode==="usd")+'">$ per year</button></div></div>'+
+      (a.mode==="pct"?field(k+"amt","Your contribution","%",null,"About "+money(S.salary*a.amt/100)+" a year"):field(k+"amt","Your contribution","$",null,"Per year"))+
+      field(k+"match","Employer match","%",null,"Percent of salary")+
+      (A.length>1?'<button class="danger small" type="button" data-remove="'+i+'">Remove account</button>':'')+
+    '</div>';
+  });
+  if(A.length<MAXACC)h+='<div class="group" style="margin-top:16px"><button class="addbtn" type="button" id="addAcct"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--green)"/><path d="M11 6v10M6 11h10" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>Add account</button></div>';
+  return h;
+}
+function buildInputs(){
+  var host=document.getElementById("inputGroups"),h="";fid=0;
+  FIELDS.forEach(function(g){
+    if(g.accounts){h+=accountsHTML();return}
+    h+='<h2 class="sh">'+g.title+'</h2><div class="group">';
+    g.rows.forEach(function(r){h+=field(r[0],r[1],r[2],r[3],r[4])});
+    h+='</div>'+(g.note?'<p class="ft">'+g.note+'</p>':'');
+  });
+  host.innerHTML=h;
+}
+function parse(str){var s=String(str).replace(/[^0-9.\-]/g,"");if(s===""||s==="-"||s===".")return null;var v=parseFloat(s);return isNaN(v)?null:v}
+var inputHost=document.getElementById("inputGroups");
+inputHost.addEventListener("focusin",function(e){var t=e.target,kd=t.dataset.kind;if(kd&&kd!=="text"){var v=getPath(t.dataset.key);t.value=(v===null||v===undefined)?"":String(v);setTimeout(function(){try{t.select()}catch(_){}},0)}});
+inputHost.addEventListener("focusout",function(e){var t=e.target,kd=t.dataset.kind;if(kd&&kd!=="text"){t.value=display(getPath(t.dataset.key),kd,t.dataset.dec===""?null:+t.dataset.dec)}});
+inputHost.addEventListener("input",function(e){
+  var t=e.target,k=t.dataset.key;if(!k)return;
+  if(t.type==="checkbox"){setPath(k,t.checked)}
+  else if(t.dataset.kind==="text"){setPath(k,t.value.slice(0,40))}
+  else{
+    var v=parse(t.value),kind=t.dataset.kind;
+    if(v===null)return;
+    if(kind==="$"||kind==="age")v=Math.max(0,v);
+    if(k==="mcSd"||k==="reducePct"||/\.(amt|match)$/.test(k))v=Math.max(0,v);
+    if(k==="age")v=Math.min(100,Math.round(v));
+    if(k==="retireAge")v=Math.min(110,Math.round(v));
+    setPath(k,v);
+    if(/\.amt$/.test(k)&&kind==="%"){var sub=t.parentNode.querySelector("label span+span");if(sub)sub.textContent="About "+money(S.salary*v/100)+" a year"}
+  }
+  changed();
+});
+inputHost.addEventListener("change",function(e){if(e.target.type==="checkbox"){setPath(e.target.dataset.key,e.target.checked);changed()}});
+inputHost.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target.dataset.kind)e.target.blur()});
+var armedRemove=null,armRT;
+inputHost.addEventListener("click",function(e){
+  var t=e.target.closest("button");if(!t)return;
+  if(t.dataset.mode){
+    var a=S.accounts[+t.dataset.i];if(a.mode===t.dataset.mode)return;
+    if(t.dataset.mode==="usd")a.amt=Math.round(S.salary*a.amt/100);
+    else a.amt=S.salary>0?Math.round(a.amt/S.salary*10000)/100:0;
+    a.mode=t.dataset.mode;buildInputs();changed();
+    var nb=inputHost.querySelector('[data-mode="'+a.mode+'"][data-i="'+t.dataset.i+'"]');if(nb)nb.focus();
+  }else if(t.dataset.remove!=null){
+    var i=+t.dataset.remove;
+    if(armedRemove!==i){armedRemove=i;t.textContent="Tap again to remove "+(S.accounts[i].name||"account");clearTimeout(armRT);armRT=setTimeout(function(){armedRemove=null;t.textContent="Remove account"},3000);return}
+    armedRemove=null;S.accounts.splice(i,1);buildInputs();changed();
+  }else if(t.id==="addAcct"){
+    S.accounts.push({name:"New account",bal:0,ret:7,mode:"usd",amt:0,match:0,soy:false});
+    buildInputs();changed();
+    var names=inputHost.querySelectorAll("input.name"),last=names[names.length-1];
+    if(last){last.focus();last.select();last.scrollIntoView({block:"center"})}
+  }
+});
+
+var simTimer=null;
+function changed(){
+  save();
+  renderPlan();
+  clearTimeout(simTimer);
+  simTimer=setTimeout(function(){runSim();if(current==="forecast")renderForecast();else renderForecastCheap()},300);
+}
+function renderForecastCheap(){/* forecast redraws when its tab opens */}
+
+var resetBtn=document.getElementById("resetBtn"),armed=false,armTimer;
+resetBtn.addEventListener("click",function(){
+  if(!armed){armed=true;resetBtn.textContent="Tap again to restore";armTimer=setTimeout(function(){armed=false;resetBtn.textContent="Restore spreadsheet values"},3000);return}
+  clearTimeout(armTimer);armed=false;resetBtn.textContent="Restore spreadsheet values";
+  S=clone(DEFAULTS);try{localStorage.removeItem(KEY)}catch(e){}
+  buildInputs();renderPlan();runSim();
+  resetBtn.textContent="Restored";setTimeout(function(){resetBtn.textContent="Restore spreadsheet values"},1600);
+});
+
+/* ---------- tabs & nav ---------- */
+var current="forecast",scrolls={};
+var titles={forecast:"Forecast",plan:"Plan",inputs:"Inputs"};
+var tabs=[].slice.call(document.querySelectorAll(".tab"));
+function show(name){
+  if(name===current){window.scrollTo({top:0,behavior:"smooth"});return}
+  scrolls[current]=window.scrollY;current=name;
+  tabs.forEach(function(t){var on=t.dataset.tab===name;t.classList.toggle("on",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current")});
+  document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("on",v.id==="v-"+name)});
+  document.getElementById("navTitle").textContent=titles[name];
+  document.getElementById("rerun").hidden=name!=="forecast";
+  if(name==="forecast")renderForecast();
+  if(name==="plan")drawPlan();
+  window.scrollTo(0,scrolls[name]||0);onScroll();
+}
+tabs.forEach(function(t){t.addEventListener("click",function(){show(t.dataset.tab)})});
+var nav=document.getElementById("nav");
+function onScroll(){var t=document.getElementById("t-"+current);nav.classList.toggle("scrolled",t.getBoundingClientRect().bottom<nav.getBoundingClientRect().bottom)}
+window.addEventListener("scroll",onScroll,{passive:true});
+document.getElementById("rerun").addEventListener("click",function(){
+  var c=document.getElementById("coneChart");c.classList.add("dim");
+  setTimeout(function(){runSim();renderForecast();c.classList.remove("dim")},120);
+});
+var rz;window.addEventListener("resize",function(){clearTimeout(rz);rz=setTimeout(function(){if(current==="forecast")renderForecast();if(current==="plan")drawPlan()},100)});
+
+/* ---------- boot ---------- */
+buildInputs();
+renderPlan();
+runSim();
+renderForecast();
+onScroll();
+})();
+</script>
+</body>
+</html>
